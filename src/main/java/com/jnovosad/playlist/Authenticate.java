@@ -16,8 +16,8 @@ public class Authenticate {
     https://developer.spotify.com/documentation/general/guides/authorization-guide/
     */
 
-    private static final String CLIENT_ID = "CLIENT_ID";
-    private static final String CLIENT_SECRET = "CLIENT_SECRET";
+    private static final String CLIENT_ID = "19be974a217a474aa6cc27705c1cd785";
+    private static final String CLIENT_SECRET = "c5093e8096df4be9ba489106e03bbbc0";
     private static final URI REDIRECT_URI = SpotifyHttpManager.makeUri("https://www.google.com/");
     private static URL redirectURL;
     private static String code;

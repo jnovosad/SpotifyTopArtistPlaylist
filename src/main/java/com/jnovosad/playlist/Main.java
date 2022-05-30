@@ -21,12 +21,14 @@ public class Main {
             Paging<PlaylistSimplified> userPlaylists = spotifyUser.getSpotifyApi().getListOfCurrentUsersPlaylists()
                     .limit(50).build().execute();
 
-            PlaylistSimplified []listOfPlaylists = userPlaylists.getItems();
+            PlaylistSimplified[] listOfPlaylists = userPlaylists.getItems();
 
             Playlist myTopArtistPlaylist = new Playlist("A mix of your faves", spotifyUser);
+            Playlist relatedArtistPlaylist = new Playlist("A mix of future faves", spotifyUser);
+            final int PLAYLIST_SIZE = 40;
 
             // TODO need to check for offset (50 playlist max limit currently, will need for loop)
-
+            // TODO duplicated code, make into function?
             for(PlaylistSimplified name: listOfPlaylists){
                 if(myTopArtistPlaylist.checkIfPlaylistNameExists(name.getName())){
                     myTopArtistPlaylist.setPlaylistID(name.getId());
@@ -34,14 +36,21 @@ public class Main {
                 }
             }
 
-            // Generate playlist or update existing (popularity < 20), return playlist ID:
+            for(PlaylistSimplified name: listOfPlaylists){
+                if(relatedArtistPlaylist.checkIfPlaylistNameExists(name.getName())){
+                    relatedArtistPlaylist.setPlaylistID(name.getId());
+                    break;
+                }
+            }
 
-            String playlistID = myTopArtistPlaylist.createNewPlaylist(userID, spotifyUser);
+            // Generate playlist or update existing, return playlist ID:
 
-            // Find current user's top artists -> TODO get the related artists (with limit on popularity)
-
-            final int PLAYLIST_SIZE = 40;
+            String topPlaylistID = myTopArtistPlaylist.createNewPlaylist(userID, spotifyUser);
+            String relatedPlaylistID = relatedArtistPlaylist.createNewPlaylist(userID, spotifyUser);
             myTopArtistPlaylist.setTracklistSize(PLAYLIST_SIZE);
+            relatedArtistPlaylist.setTracklistSize(PLAYLIST_SIZE);
+
+            // Find current user's top artists -> TODO get the related artists
 
             Paging<Artist> userTopArtists = spotifyUser.getSpotifyApi().getUsersTopArtists()
                     .limit(PLAYLIST_SIZE).time_range("short_term").build().execute();
@@ -49,26 +58,43 @@ public class Main {
             Artist []userTopArtistsList = userTopArtists.getItems();
 
             // For every artist, get their top tracks (as part of Artist class)
-            List<com.jnovosad.playlist.Artist> playlistArtists = new ArrayList<com.jnovosad.playlist.Artist>();
+            List<com.jnovosad.playlist.Artist> topPlaylistArtists = new ArrayList<com.jnovosad.playlist.Artist>();
 
             for(Artist artist: userTopArtistsList) {
-                playlistArtists.add(new com.jnovosad.playlist.Artist(artist, spotifyUser));
-
+                topPlaylistArtists.add(new com.jnovosad.playlist.Artist(artist, spotifyUser));
             }
 
-            String uris[] = new String[playlistArtists.size()];
+            String[] topArtistUris = new String[topPlaylistArtists.size()];
 
             // Pick one random track from each artist
-            for(int i = 0; i < playlistArtists.size(); i++) {
-                uris[i] = playlistArtists.get(i).getRandomTopSong();
+            for(int i = 0; i < topPlaylistArtists.size(); i++) {
+                topArtistUris[i] = topPlaylistArtists.get(i).getRandomTopSong();
             }
 
             // Add tracks to playlist
-            myTopArtistPlaylist.replaceSongsinSpotify(playlistID, uris);
+            myTopArtistPlaylist.replaceSongsinSpotify(topPlaylistID, topArtistUris);
 
-            /*for(com.jnovosad.playlist.Artist artist: playlistArtists) {
-                System.out.println(artist.getRandomTopSong());
-            }*/
+
+            /*
+            *       The below is for the related artists playlist creation
+            *
+            * */
+
+            List<com.jnovosad.playlist.Artist> relatedPlaylistArtists = new ArrayList<com.jnovosad.playlist.Artist>();
+
+            for(com.jnovosad.playlist.Artist artist: topPlaylistArtists){
+                artist.setRelatedArtists();
+                relatedPlaylistArtists.add(
+                        new com.jnovosad.playlist.Artist(artist.getRandomRelatedArtist(), spotifyUser));
+            }
+
+            String[] relatedArtistUris = new String[relatedPlaylistArtists.size()];
+
+            for(int i = 0; i < relatedPlaylistArtists.size(); i++) {
+                relatedArtistUris[i] = relatedPlaylistArtists.get(i).getRandomTopSong();
+            }
+
+            relatedArtistPlaylist.replaceSongsinSpotify(relatedPlaylistID, relatedArtistUris);
 
             // Initial test: get random song from every top artist, add to playlist
 
